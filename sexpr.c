@@ -77,6 +77,15 @@ void sexpr_parse_error_set(sexpr_parse_error_t *err, sexpr_parse_error_type_t ty
     err->pos = ctx->offset;
 }
 
+void sexpr_parse_error_clear(sexpr_parse_error_t *err) {
+    if (!err) {
+        return;
+    }
+
+    err->type = SEXPR_PARSE_ERROR_NONE;
+    err->pos = 0;
+}
+
 bool utf8cp_isspace(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
     return category == UTF8PROC_CATEGORY_ZS;
@@ -304,7 +313,12 @@ sexpr_t *parse_ctx_read_atom(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) 
         }
 
         *ctx = ctx_checkpoint;
-        return parse_ctx_read_symbol(ctx);
+        sexpr = parse_ctx_read_symbol(ctx);
+        if (sexpr) {
+            sexpr_parse_error_clear(err);
+        }
+
+        return sexpr;
     } else if (utf8cp_issymbol(token)) {
         return parse_ctx_read_symbol(ctx);
     } else {
