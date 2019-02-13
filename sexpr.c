@@ -98,12 +98,18 @@ bool utf8codepoint_isquotation(utf8_int32_t cp) {
     return cp == TOKEN_QUOT;
 }
 
-bool utf8codepoint_isnumber(utf8_int32_t cp) {
+bool utf8codepoint_isdigit(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
-    return category == UTF8PROC_CATEGORY_ND
-        || cp == TOKEN_PLUS
-        || cp == TOKEN_MINUS
-        || cp == TOKEN_DOT;
+    return category == UTF8PROC_CATEGORY_ND;
+}
+
+bool utf8codepoint_isnumberprefix(utf8_int32_t cp) {
+    return cp == TOKEN_PLUS || cp == TOKEN_MINUS;
+}
+
+bool utf8codepoint_isnumber(utf8_int32_t cp) {
+    return utf8codepoint_isdigit(cp)
+        || utf8codepoint_isnumberprefix(cp);
 }
 
 size_t parse_ctx_next_codepoint_size(struct parse_ctx_s *ctx) {
@@ -225,11 +231,22 @@ long int *parse_ctx_parse_int(struct parse_ctx_s *ctx, size_t length, sexpr_pars
 
 sexpr_t *parse_ctx_read_number(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) {
     utf8_int32_t token;
+    size_t prefix_length = 0;
     size_t length = 0;
     bool is_float = false;
 
+    if (!parse_ctx_peek(ctx, &token)) {
+        sexpr_parse_error_set(err, SEXPR_PARSE_ERROR_UNEXPECTED_EOS, ctx);
+        return NULL;
+    }
+
+    if (utf8codepoint_isnumberprefix(token)) {
+        parse_ctx_read(ctx);
+        prefix_length = utf8codepointsize(token);
+    }
+
     while (parse_ctx_peek(ctx, &token)) {
-        if (!utf8codepoint_isnumber(token)) {
+        if (!utf8codepoint_isdigit(token) && token != TOKEN_DOT) {
             break;
         }
 
@@ -246,15 +263,20 @@ sexpr_t *parse_ctx_read_number(struct parse_ctx_s *ctx, sexpr_parse_error_t *err
         length += utf8codepointsize(token);
     }
 
+    if (length == 0) {
+        sexpr_parse_error_set(err, SEXPR_PARSE_ERROR_UNEXPECTED_TOKEN, ctx);
+        return NULL;
+    }
+
     if (is_float) {
-        float *num = parse_ctx_parse_float(ctx, length, err);
+        float *num = parse_ctx_parse_float(ctx, length + prefix_length, err);
         if (!num) {
             return NULL;
         }
 
         return sexpr_alloc(SEXPR_TYPE_FLOAT, num);
     } else {
-        long int *num = parse_ctx_parse_int(ctx, length, err);
+        long int *num = parse_ctx_parse_int(ctx, length + prefix_length, err);
         if (!num) {
             return NULL;
         }
@@ -274,7 +296,15 @@ sexpr_t *parse_ctx_read_atom(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) 
     if (token == TOKEN_QUOT) {
         return parse_ctx_read_string(ctx, err);
     } else if (utf8codepoint_isnumber(token)) {
-        return parse_ctx_read_number(ctx, err);
+        struct parse_ctx_s ctx_checkpoint = *ctx;
+
+        sexpr_t *sexpr = parse_ctx_read_number(ctx, err);
+        if (sexpr) {
+            return sexpr;
+        }
+
+        *ctx = ctx_checkpoint;
+        return parse_ctx_read_symbol(ctx);
     } else if (utf8codepoint_issymbol(token)) {
         return parse_ctx_read_symbol(ctx);
     } else {
