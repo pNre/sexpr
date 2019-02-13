@@ -6,7 +6,7 @@
 
 enum {
     TOKEN_QUOT = '"',
-    TOKEN_DOT = '.',
+    TOKEN_FULLSTOP = '.',
     TOKEN_PLUS = '+',
     TOKEN_MINUS = '-',
     TOKEN_LPAR = '(',
@@ -77,12 +77,12 @@ void sexpr_parse_error_set(sexpr_parse_error_t *err, sexpr_parse_error_type_t ty
     err->pos = ctx->offset;
 }
 
-bool utf8codepoint_isspace(utf8_int32_t cp) {
+bool utf8cp_isspace(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
     return category == UTF8PROC_CATEGORY_ZS;
 }
 
-bool utf8codepoint_issymbol(utf8_int32_t cp) {
+bool utf8cp_issymbol(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
     return category == UTF8PROC_CATEGORY_LU
         || category == UTF8PROC_CATEGORY_LL
@@ -94,22 +94,22 @@ bool utf8codepoint_issymbol(utf8_int32_t cp) {
         || category == UTF8PROC_CATEGORY_SO;
 }
 
-bool utf8codepoint_isquotation(utf8_int32_t cp) {
+bool utf8cp_isquotation(utf8_int32_t cp) {
     return cp == TOKEN_QUOT;
 }
 
-bool utf8codepoint_isdigit(utf8_int32_t cp) {
+bool utf8cp_isdigit(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
     return category == UTF8PROC_CATEGORY_ND;
 }
 
-bool utf8codepoint_isnumberprefix(utf8_int32_t cp) {
+bool utf8cp_issign(utf8_int32_t cp) {
     return cp == TOKEN_PLUS || cp == TOKEN_MINUS;
 }
 
-bool utf8codepoint_isnumber(utf8_int32_t cp) {
-    return utf8codepoint_isdigit(cp)
-        || utf8codepoint_isnumberprefix(cp);
+bool utf8cp_isnumber(utf8_int32_t cp) {
+    return utf8cp_isdigit(cp)
+        || utf8cp_issign(cp);
 }
 
 size_t parse_ctx_next_codepoint_size(struct parse_ctx_s *ctx) {
@@ -151,7 +151,7 @@ void parse_ctx_read(struct parse_ctx_s *ctx) {
 
 void parse_ctx_read_whitespaces(struct parse_ctx_s *ctx) {
     utf8_int32_t token;
-    while (parse_ctx_peek(ctx, &token) && utf8codepoint_isspace(token)) {
+    while (parse_ctx_peek(ctx, &token) && utf8cp_isspace(token)) {
         parse_ctx_read(ctx);
     }
 }
@@ -194,12 +194,12 @@ sexpr_t *parse_ctx_read_string(struct parse_ctx_s *ctx, sexpr_parse_error_t *err
         return NULL;
     }
 
-    void *string = parse_ctx_read_cond(ctx, true, utf8codepoint_isquotation);
+    void *string = parse_ctx_read_cond(ctx, true, utf8cp_isquotation);
     return sexpr_alloc(SEXPR_TYPE_STRING, string);
 }
 
 sexpr_t *parse_ctx_read_symbol(struct parse_ctx_s *ctx) {
-    void *symbol = parse_ctx_read_cond(ctx, false, utf8codepoint_issymbol);
+    void *symbol = parse_ctx_read_cond(ctx, false, utf8cp_issymbol);
     return sexpr_alloc(SEXPR_TYPE_SYMBOL, symbol);
 }
 
@@ -240,19 +240,19 @@ sexpr_t *parse_ctx_read_number(struct parse_ctx_s *ctx, sexpr_parse_error_t *err
         return NULL;
     }
 
-    if (utf8codepoint_isnumberprefix(token)) {
+    if (utf8cp_issign(token)) {
         parse_ctx_read(ctx);
         prefix_length = utf8codepointsize(token);
     }
 
     while (parse_ctx_peek(ctx, &token)) {
-        if (!utf8codepoint_isdigit(token) && token != TOKEN_DOT) {
+        if (!utf8cp_isdigit(token) && token != TOKEN_FULLSTOP) {
             break;
         }
 
         parse_ctx_read(ctx);
 
-        if (token == TOKEN_DOT) {
+        if (token == TOKEN_FULLSTOP) {
             if (is_float) {
                 sexpr_parse_error_set(err, SEXPR_PARSE_ERROR_UNEXPECTED_TOKEN, ctx);
                 return NULL;
@@ -293,9 +293,9 @@ sexpr_t *parse_ctx_read_atom(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) 
         return NULL;
     }
 
-    if (token == TOKEN_QUOT) {
+    if (utf8cp_isquotation(token)) {
         return parse_ctx_read_string(ctx, err);
-    } else if (utf8codepoint_isnumber(token)) {
+    } else if (utf8cp_isnumber(token)) {
         struct parse_ctx_s ctx_checkpoint = *ctx;
 
         sexpr_t *sexpr = parse_ctx_read_number(ctx, err);
@@ -305,7 +305,7 @@ sexpr_t *parse_ctx_read_atom(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) 
 
         *ctx = ctx_checkpoint;
         return parse_ctx_read_symbol(ctx);
-    } else if (utf8codepoint_issymbol(token)) {
+    } else if (utf8cp_issymbol(token)) {
         return parse_ctx_read_symbol(ctx);
     } else {
         sexpr_parse_error_set(err, SEXPR_PARSE_ERROR_UNEXPECTED_TOKEN, ctx);
