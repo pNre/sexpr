@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
             sexpr_print(n->value, 0);
             n = n->next;
         }
+
+        list_free(exprs);
     } else {
         fprintf(stderr, "Parse error %d\n", error.type);
     }

@@ -365,4 +365,3 @@ list_t *sexpr_from_string(void *s, sexpr_parse_error_t *err) {
 
     return parse_ctx_parse(&ctx, err);
 }
-
