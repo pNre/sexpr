@@ -89,7 +89,8 @@ void sexpr_parse_error_clear(sexpr_parse_error_t *err) {
 
 bool utf8cp_isspace(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
-    return cp == '\n' || category == UTF8PROC_CATEGORY_ZS;
+    return category == UTF8PROC_CATEGORY_CC
+        || category == UTF8PROC_CATEGORY_ZS;
 }
 
 bool utf8cp_issymbol(utf8_int32_t cp) {
@@ -396,6 +397,8 @@ list_t *parse_ctx_parse(struct parse_ctx_s *ctx, sexpr_parse_error_t *err) {
             list_current->next = node;
             list_current = node;
         }
+
+        parse_ctx_read_whitespaces(ctx);
     }
 
     return list_head;
