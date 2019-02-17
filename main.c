@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Searching for sym3\n");
-    sexpr_t *sym3 = sexpr_value_for_symbol_at(exprs->value, "sym1.sym3");
+    sexpr_t *sym3 = sexpr_list_with_symbol_at(exprs->value, "sym1.sym3");
     if (sym3) {
-        char *hello = ((sexpr_t *)sym3->list_val->next->value)->string_val;
-        printf("sym3 found, %s\n", hello);
+        sexpr_t *str = sexpr_list_nth_item(sym3, 1);
+        printf("sym3 found, %s\n", str->string_val);
     }
 
     list_free(exprs);

@@ -411,7 +411,7 @@ list_t *sexpr_from_string(void *s, sexpr_parse_error_t *err) {
     return parse_ctx_parse(&ctx, err);
 }
 
-sexpr_t *sexpr_value_for_symbol_at(sexpr_t *expr, const char *path) {
+sexpr_t *sexpr_list_with_symbol_at(sexpr_t *expr, const char *path) {
     if (expr->type != SEXPR_TYPE_LIST || !expr->list_val) {
         return NULL;
     }
@@ -430,7 +430,7 @@ sexpr_t *sexpr_value_for_symbol_at(sexpr_t *expr, const char *path) {
         switch (curr_sexpr->type) {
         case SEXPR_TYPE_LIST:
             if (component) {
-                sexpr_t *next_sexpr = sexpr_value_for_symbol_at(curr_sexpr, component + 1);
+                sexpr_t *next_sexpr = sexpr_list_with_symbol_at(curr_sexpr, component + 1);
                 if (next_sexpr) {
                     return next_sexpr;
                 }
@@ -458,3 +458,22 @@ sexpr_t *sexpr_value_for_symbol_at(sexpr_t *expr, const char *path) {
 
     return NULL;
 }
+
+sexpr_t *sexpr_list_nth_item(sexpr_t *expr, int nth) {
+    if (expr->type != SEXPR_TYPE_LIST) {
+        return NULL;
+    }
+
+    list_t *list = expr->list_val;
+    while (nth > 0 && list) {
+        list = list->next;
+        nth--;
+    }
+
+    if (!list) {
+        return NULL;
+    }
+
+    return list->value;
+}
+
