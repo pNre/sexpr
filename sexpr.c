@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include "sexpr.h"
 #include "utf8.h/utf8.h"
 #include "utf8proc/utf8proc.h"
@@ -408,4 +409,52 @@ list_t *sexpr_from_string(void *s, sexpr_parse_error_t *err) {
     };
 
     return parse_ctx_parse(&ctx, err);
+}
+
+sexpr_t *sexpr_value_for_symbol_at(sexpr_t *expr, const char *path) {
+    if (expr->type != SEXPR_TYPE_LIST || !expr->list_val) {
+        return NULL;
+    }
+
+    size_t component_length;
+    const char *component = strchr(path, '.');
+    if (component) {
+        component_length = component - path;
+    } else {
+        component_length = strlen(path);
+    }
+
+    list_t *list_head = expr->list_val;
+    while (list_head) {
+        sexpr_t *curr_sexpr = list_head->value;
+        switch (curr_sexpr->type) {
+        case SEXPR_TYPE_LIST:
+            if (component) {
+                sexpr_t *next_sexpr = sexpr_value_for_symbol_at(curr_sexpr, component + 1);
+                if (next_sexpr) {
+                    return next_sexpr;
+                }
+            }
+            break;
+        case SEXPR_TYPE_SYMBOL:
+            if (!strncmp(curr_sexpr->symbol_val, path, component_length)) {
+                if (component) {
+                    const char *next_component = strchr(component + 1, '.');
+                    if (next_component) {
+                        component_length = next_component - component - 1;
+                        component = next_component;
+                    }
+                } else {
+                    return expr;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        list_head = list_head->next;
+    }
+
+    return NULL;
 }

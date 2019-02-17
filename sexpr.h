@@ -44,5 +44,6 @@ typedef struct {
 void list_free(list_t *list);
 
 list_t *sexpr_from_string(void *s, sexpr_parse_error_t *err);
+sexpr_t *sexpr_value_for_symbol_at(sexpr_t *expr, const char *path);
 
 #endif

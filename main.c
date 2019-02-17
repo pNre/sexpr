@@ -37,22 +37,29 @@ void sexpr_print(sexpr_t *s, int nesting_level) {
 
 int main(int argc, char *argv[]) {
     sexpr_parse_error_t error;
-    char *s = "(sym1 sym2 \"str1 ∆ 🧱\" (sym3 (ƒ 10 -5 (9.15 -.1)))) (® \"yes\") (+ 1 2 3 4 5)";
+    char *s = "(sym1 sym2 \"str1 ∆ 🧱\" (sym3 \"hello world\" (ƒ 10 -5 (9.15 -.1)))) (® \"yes\") (+ 1 2 3 4 5)";
+
     printf("Parsing %s\n", s);
     list_t *exprs = sexpr_from_string(s, &error);
-
-    if (exprs) {
-        list_t *n = exprs;
-
-        while (n) {
-            sexpr_print(n->value, 0);
-            n = n->next;
-        }
-
-        list_free(exprs);
-    } else {
+    if (!exprs) {
         fprintf(stderr, "Parse error %d\n", error.type);
+        return EXIT_FAILURE;
     }
+
+    list_t *n = exprs;
+    while (n) {
+        sexpr_print(n->value, 0);
+        n = n->next;
+    }
+
+    printf("Searching for sym3\n");
+    sexpr_t *sym3 = sexpr_value_for_symbol_at(exprs->value, "sym1.sym3");
+    if (sym3) {
+        char *hello = ((sexpr_t *)sym3->list_val->next->value)->string_val;
+        printf("sym3 found, %s\n", hello);
+    }
+
+    list_free(exprs);
 
     return EXIT_SUCCESS;
 }
