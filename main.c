@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     printf("Parsing %s\n", s);
     list_t *exprs = sexpr_from_string(s, &error);
     if (!exprs) {
-        fprintf(stderr, "Parse error %d\n", error.type);
+        fprintf(stderr, "Parse error %d at %zu\n", error.type, error.pos);
         return EXIT_FAILURE;
     }
 

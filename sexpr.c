@@ -89,7 +89,7 @@ void sexpr_parse_error_clear(sexpr_parse_error_t *err) {
 
 bool utf8cp_isspace(utf8_int32_t cp) {
     utf8proc_category_t category = utf8proc_category(cp);
-    return category == UTF8PROC_CATEGORY_ZS;
+    return cp == '\n' || category == UTF8PROC_CATEGORY_ZS;
 }
 
 bool utf8cp_issymbol(utf8_int32_t cp) {
